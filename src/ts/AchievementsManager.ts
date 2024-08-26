@@ -277,11 +277,16 @@ export class AchievementManager implements Manager
 	{
 		const settings = this.state.settings;
 		this.logger.debug(`${app_id} auth: `, settings.retroachievements.username, settings.retroachievements.api_key);
-		if (this.ids[app_id] === null) return undefined;
+
+		if (this.ids[app_id] === null && (this.customIdsOverrides[app_id] && this.customIdsOverrides[app_id]?.retro_achivement_game_id === null)) {
+			return undefined;
+		};
+
 		await waitForOnline(this.serverAPI);
 		const shortcut = await getAppDetails(app_id);
 		this.logger.debug(`${app_id} shortcut: `, shortcut);
 		let hash: string | null = null;
+
 		if (shortcut)
 		{
 			const launchCommand = `${shortcut.strShortcutExe} ${shortcut.strShortcutLaunchOptions}`;
@@ -631,10 +636,32 @@ export class AchievementManager implements Manager
 					this.fetching = true;
 					this.clearRuntimeCache();
 
-					await this.refreshAchievementsForApps(
-						(await getAllNonSteamAppIds()).filter((appId) => this.ids[appId] !== null)
-					);
+					const allNonSteamAppIds = await getAllNonSteamAppIds();
+					const nonSteamAppIdsWithRetroAchievementId = allNonSteamAppIds.filter((appId) => {
+							if (this.ids[appId] !== null) {
+								return true;
+							}
 
+							if (this.customIdsOverrides[appId] && this.customIdsOverrides[appId].retro_achivement_game_id !== null) {
+								return true;
+							}
+
+							return false;
+						})
+
+					// NOTE: Checks for games what does not exists in user library and removes them from
+					//       `cache` configuration
+					const gameIdsToBeRemoved = Object.keys(this.customIdsOverrides)
+						.filter((appId) => !allNonSteamAppIds.includes(Number.parseInt(appId, 10)));
+
+					for (const gameIdToBeRemoved of gameIdsToBeRemoved) {
+						const gameIdToBeRemovedAsNumber = Number.parseInt(gameIdToBeRemoved, 10);
+
+						delete this.ids[gameIdToBeRemovedAsNumber]
+						delete this.customIdsOverrides[gameIdToBeRemovedAsNumber]
+					}
+
+					await this.refreshAchievementsForApps(nonSteamAppIdsWithRetroAchievementId);
 				}
 			} else
 			{
