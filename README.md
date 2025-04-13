@@ -1,3 +1,6 @@
+# Archived
+This repository is archived because it is a fork of existent plugin and I want to rewrite it completly from scratch. A new alternative plugin will be available soon (maybe).
+
 # Emuchievements 
 [![Crowdin](https://badges.crowdin.net/emuchievements/localized.svg)](https://crowdin.com/project/emuchievements)
 
